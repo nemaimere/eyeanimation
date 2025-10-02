@@ -5,7 +5,7 @@ use crossterm::{
 use std::io;
 use std::{thread, time::Duration};
 
-fn main() -> io::Result<()> {
+fn crossterm_main() -> io::Result<()> {
     terminal::enable_raw_mode()?; // enabling raw mode makes the terminal not show input characters
                                   // and allows capturing special keys like arrows
     let mut isx = false; // tells us when the eye is in x state or O any other state
@@ -36,6 +36,33 @@ fn main() -> io::Result<()> {
 
     terminal::disable_raw_mode()?; // Disable raw mode before exiting
     Ok(())
+}
+
+// --- Bevy integration ---
+use bevy::prelude::*;
+
+fn main() {
+    App::new()
+        .add_plugins(DefaultPlugins)
+        .add_systems(Startup, setup)
+        .run();
+}
+
+fn setup(mut commands: Commands) {
+    // Camera
+    commands.spawn(Camera2dBundle::default());
+    // Draw a circle
+    commands.spawn(
+        SpriteBundle {
+            sprite: Sprite {
+                color: Color::rgb(0.2, 0.7, 0.9),
+                custom_size: Some(Vec2::new(100.0, 100.0)),
+                ..Default::default()
+            },
+            transform: Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
+            ..Default::default()
+        }
+    );
 }
 
 fn animationeyeblink(isx: bool) {
