@@ -23,16 +23,21 @@ fn setup(
     commands.spawn(Camera2dBundle::default());
 
     // Load and create the texture atlas
-    let texture_handle = asset_server.load("C:/Users/nemai/work/eyeanimation/playpng/assets/blinktwocolumn.png");
+    // let texture_handle = asset_server.load("C:/Users/nemai/work/eyeanimation/playpng/assets/blinktwocolumn.png");
+     let texture_handle = asset_server.load("assets/dumb.png");
+
+    println!("GOT THE HANDLE...\n");
     let texture_atlas = TextureAtlas::from_grid(
         texture_handle,
         Vec2::new(400.0, 400.0),  // Larger frame size
-        2,                       // Fewer columns
-        2,                       // Two rows
+        1,                       // Fewer columns
+        1,                       // Two rows
         None,                    // Optional padding
         None,                    // Optional offset
     );
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
+    println!("GOT THE atlas HANDLE...\n");
+
 
     // Spawn the animated sprite
     commands.spawn((
