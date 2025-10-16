@@ -76,6 +76,7 @@ fn main() -> Result<(), String> {
     let mut direction = 1i32; // 1 for forward, -1 for backward
     let mut last_frame_time = Instant::now();
     let frame_duration = Duration::from_millis(FRAME_DURATION_MS);
+    let mut paused = false;
 
     let mut event_pump = sdl_context.event_pump()?;
 
@@ -89,14 +90,21 @@ fn main() -> Result<(), String> {
                     keycode: Some(Keycode::Escape),
                     ..
                 } => break 'running,
+                Event::KeyDown {
+                    keycode: Some(Keycode::Space),
+                    ..
+                } => {
+                    paused = !paused;
+                    println!("{}", if paused { "Paused" } else { "Resumed" });
+                }
                 _ => {}
             }
         }
 
         let now = Instant::now();
 
-        // Check if it's time to advance to the next frame
-        if now.duration_since(last_frame_time) >= frame_duration {
+        // Check if it's time to advance to the next frame (only if not paused)
+        if !paused && now.duration_since(last_frame_time) >= frame_duration {
             last_frame_time = now;
 
             // Advance frame index
