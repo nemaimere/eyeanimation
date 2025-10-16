@@ -48,3 +48,19 @@ directory (specified again with -o), and for each original image
 named, e.g. `foo01.png` create outputs `foo01L.png` and `foo01R.png`
 for the left and right sides.
 
+--- 
+
+We're going to replay the (partial) program in this folder with a
+simpler one.  Rather than trying to use the complicated bevy game
+engine, and use texture atlases to load a sprite sheet, let's create
+an animation in the simplest possible way.
+
+Use the simplest widely used libraries available, ideally with simpler
+types (fewer traits, polymorphism, complicated callbacks).
+
+The directory `assets/blink_one_eye/blink*.png` contains a series of
+frames. Load these all into memory in an array. Then, create a simple
+animation by opening a window at the same resolution as those images
+(480x800). Play an animation by playing frames 1..N, leaving each
+frame up for 100ms, and then reversing the frames rather than looping
+(e.g. frames 1,2,3,4,5,6,5,4,3,2,1,2...).
