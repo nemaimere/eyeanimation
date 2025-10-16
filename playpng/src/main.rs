@@ -65,10 +65,12 @@ fn main() -> Result<(), String> {
     let window = video_subsystem
         .window("Blink Animation", WIDTH, HEIGHT)
         .position_centered()
+        .fullscreen_desktop()
         .build()
         .map_err(|e| e.to_string())?;
 
     let mut canvas = window.into_canvas().build().map_err(|e| e.to_string())?;
+    let mut is_fullscreen = true;
     let texture_creator = canvas.texture_creator();
 
     // Animation state
@@ -96,6 +98,21 @@ fn main() -> Result<(), String> {
                 } => {
                     paused = !paused;
                     println!("{}", if paused { "Paused" } else { "Resumed" });
+                }
+                Event::KeyDown {
+                    keycode: Some(Keycode::Return),
+                    ..
+                } => {
+                    // Toggle fullscreen mode
+                    is_fullscreen = !is_fullscreen;
+                    let fullscreen_type = if is_fullscreen {
+                        sdl2::video::FullscreenType::Desktop
+                    } else {
+                        sdl2::video::FullscreenType::Off
+                    };
+                    canvas.window_mut().set_fullscreen(fullscreen_type)
+                        .map_err(|e| e.to_string())?;
+                    println!("{}", if is_fullscreen { "Fullscreen enabled" } else { "Fullscreen disabled" });
                 }
                 _ => {}
             }
