@@ -3,41 +3,57 @@ use sdl2::keyboard::Keycode;
 use sdl2::pixels::PixelFormatEnum;
 use image::GenericImageView;
 use std::time::{Duration, Instant};
+use std::fs;
+use std::path::PathBuf;
 
 const WIDTH: u32 = 480;
 const HEIGHT: u32 = 800;
-const FRAME_DURATION_MS: u64 = 100;
+const FRAME_DURATION_MS: u64 = 80;
+const FRAMES_DIR: &str = "assets/blink_one_eye";
 
 fn main() -> Result<(), String> {
-    // Load all frames into memory
-    let frame_paths = [
-        "assets/blink_one_eye/blink01.png",
-        "assets/blink_one_eye/blink02.png",
-        "assets/blink_one_eye/blink03.png",
-        "assets/blink_one_eye/blink04.png",
-        "assets/blink_one_eye/blink05.png",
-        "assets/blink_one_eye/blink06.png",
-    ];
+    // Read all PNG files from the target folder
+    let mut frame_paths: Vec<PathBuf> = fs::read_dir(FRAMES_DIR)
+        .map_err(|e| format!("Failed to read directory {}: {}", FRAMES_DIR, e))?
+        .filter_map(|entry| {
+            entry.ok().and_then(|e| {
+                let path = e.path();
+                if path.extension().and_then(|s| s.to_str()) == Some("png") {
+                    Some(path)
+                } else {
+                    None
+                }
+            })
+        })
+        .collect();
 
+    // Sort frames alphabetically to ensure correct order
+    frame_paths.sort();
+
+    if frame_paths.is_empty() {
+        return Err(format!("No PNG files found in {}", FRAMES_DIR));
+    }
+
+    println!("Found {} frames in {}", frame_paths.len(), FRAMES_DIR);
     println!("Loading frames...");
     let mut frames: Vec<Vec<u8>> = Vec::new();
 
     for path in &frame_paths {
         let img = image::open(path)
-            .map_err(|e| format!("Failed to load {}: {}", path, e))?;
+            .map_err(|e| format!("Failed to load {}: {}", path.display(), e))?;
         let (width, height) = img.dimensions();
 
         if width != WIDTH || height != HEIGHT {
             return Err(format!(
                 "Image {} has wrong dimensions: {}x{}, expected {}x{}",
-                path, width, height, WIDTH, HEIGHT
+                path.display(), width, height, WIDTH, HEIGHT
             ));
         }
 
         // Convert image to RGB buffer
         let rgb_img = img.to_rgb8();
         frames.push(rgb_img.into_raw());
-        println!("Loaded {}", path);
+        println!("Loaded {}", path.display());
     }
 
     println!("All frames loaded! Starting animation...");
