@@ -1,6 +1,7 @@
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::PixelFormatEnum;
+use sdl2::rect::Rect;
 use image::GenericImageView;
 use std::time::{Duration, Instant};
 use std::fs;
@@ -147,8 +148,33 @@ fn main() -> Result<(), String> {
             .update(None, &frames[current_frame_index], (WIDTH * 3) as usize)
             .map_err(|e| e.to_string())?;
 
+        // Get the window size (which may differ from WIDTH/HEIGHT in fullscreen)
+        let (window_width, window_height) = canvas.output_size()
+            .map_err(|e| e.to_string())?;
+
+        // Calculate the destination rectangle to maintain aspect ratio
+        let image_aspect = WIDTH as f32 / HEIGHT as f32;
+        let window_aspect = window_width as f32 / window_height as f32;
+
+        let (dst_width, dst_height) = if window_aspect > image_aspect {
+            // Window is wider than image - pillarbox (black bars on sides)
+            let scaled_height = window_height;
+            let scaled_width = (scaled_height as f32 * image_aspect) as u32;
+            (scaled_width, scaled_height)
+        } else {
+            // Window is taller than image - letterbox (black bars on top/bottom)
+            let scaled_width = window_width;
+            let scaled_height = (scaled_width as f32 / image_aspect) as u32;
+            (scaled_width, scaled_height)
+        };
+
+        // Center the image in the window
+        let dst_x = (window_width as i32 - dst_width as i32) / 2;
+        let dst_y = (window_height as i32 - dst_height as i32) / 2;
+        let dst_rect = Rect::new(dst_x, dst_y, dst_width, dst_height);
+
         canvas.clear();
-        canvas.copy(&texture, None, None)?;
+        canvas.copy(&texture, None, Some(dst_rect))?;
         canvas.present();
 
         // Small sleep to avoid burning CPU
