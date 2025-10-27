@@ -80,10 +80,7 @@ fn main() -> Result<(), String> {
     let mut direction = 1i32; // 1 for forward, -1 for backward
     let mut last_frame_time = Instant::now();
     let frame_duration = Duration::from_millis(FRAME_DURATION_MS);
-    let loop_pause_duration = Duration::from_millis(LOOP_PAUSE_MS);
     let mut paused = true;
-    let mut loop_pause_end_time: Option<Instant> = None;
-
     let mut event_pump = sdl_context.event_pump()?;
 
     // Main loop
@@ -124,17 +121,9 @@ fn main() -> Result<(), String> {
 
         let now = Instant::now();
 
-        // Check if we're in a loop pause
-        if let Some(pause_end) = loop_pause_end_time {
-            if now >= pause_end {
-                // Pause is over, resume animation
-                loop_pause_end_time = None;
-                last_frame_time = now;
-            }
-        }
 
         // Check if it's time to advance to the next frame (only if not paused and not in loop pause)
-        if !paused && loop_pause_end_time.is_none() && now.duration_since(last_frame_time) >= frame_duration {
+        if !paused && now.duration_since(last_frame_time) >= frame_duration {
             last_frame_time = now;
 
             // Advance frame index
@@ -148,7 +137,6 @@ fn main() -> Result<(), String> {
             } else if current_frame_index == 0 && direction == -1 {
                 // Back at the start after reversing, start loop pause before going forward again
                 direction = 1;
-                loop_pause_end_time = Some(now + loop_pause_duration);
                 paused = true;
             }
         }
