@@ -81,7 +81,7 @@ fn main() -> Result<(), String> {
     let mut last_frame_time = Instant::now();
     let frame_duration = Duration::from_millis(FRAME_DURATION_MS);
     let loop_pause_duration = Duration::from_millis(LOOP_PAUSE_MS);
-    let mut paused = false;
+    let mut paused = true;
     let mut loop_pause_end_time: Option<Instant> = None;
 
     let mut event_pump = sdl_context.event_pump()?;
@@ -149,6 +149,7 @@ fn main() -> Result<(), String> {
                 // Back at the start after reversing, start loop pause before going forward again
                 direction = 1;
                 loop_pause_end_time = Some(now + loop_pause_duration);
+                paused = true;
             }
         }
 
