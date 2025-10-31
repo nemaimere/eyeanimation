@@ -63,16 +63,34 @@ fn main() -> Result<(), String> {
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
 
-    let window = video_subsystem
-        .window("Blink Animation", WIDTH, HEIGHT)
-        .position_centered()
-        .fullscreen_desktop()
-        .build()
-        .map_err(|e| e.to_string())?;
+    // Create one window/canvas per display (up to 2). If multiple displays
+    // aren't available, create two windows positioned side-by-side.
+    let mut canvases = Vec::new();
+    let desired_windows = 2;
+    for display_idx in 0..desired_windows {
+        // Try to get display bounds for this index. If unavailable, fall back
+        // to centered positioning (SDL will choose a default display).
+        let mut wb = video_subsystem
+            .window(&format!("Blink Animation - {}", display_idx), WIDTH, HEIGHT);
 
-    let mut canvas = window.into_canvas().build().map_err(|e| e.to_string())?;
-    let mut is_fullscreen = true;
-    let texture_creator = canvas.texture_creator();
+        if let Ok(bounds) = video_subsystem.display_bounds(display_idx) {
+            // Position the window at the display origin so it appears on that monitor.
+            wb = wb.position(bounds.x(), bounds.y());
+        } else if display_idx == 1 {
+            // If there's no second display, offset the second window so both are visible.
+            wb = wb.position((WIDTH + 50) as i32, 50);
+        } else {
+            wb = wb.position_centered();
+        }
+
+        // Do not start as fullscreen for each window; we'll toggle fullscreen later
+        // to desktop fullscreen across all windows if desired.
+        let window = wb.build().map_err(|e| e.to_string())?;
+        let canvas = window.into_canvas().build().map_err(|e| e.to_string())?;
+        canvases.push(canvas);
+    }
+
+    let mut is_fullscreen = false;
 
     // Animation state
     let mut current_frame_index = 0;
@@ -103,15 +121,18 @@ fn main() -> Result<(), String> {
                     keycode: Some(Keycode::Return),
                     ..
                 } => {
-                    // Toggle fullscreen mode
+                    // Toggle fullscreen mode for all windows/canvases
                     is_fullscreen = !is_fullscreen;
                     let fullscreen_type = if is_fullscreen {
                         sdl2::video::FullscreenType::Desktop
                     } else {
                         sdl2::video::FullscreenType::Off
                     };
-                    canvas.window_mut().set_fullscreen(fullscreen_type)
-                        .map_err(|e| e.to_string())?;
+                    for c in canvases.iter_mut() {
+                        c.window_mut()
+                            .set_fullscreen(fullscreen_type)
+                            .map_err(|e| e.to_string())?;
+                    }
                     println!("{}", if is_fullscreen { "Fullscreen enabled" } else { "Fullscreen disabled" });
                 }
                 _ => {}
@@ -140,43 +161,46 @@ fn main() -> Result<(), String> {
             }
         }
 
-        // Display the current frame
-        let mut texture = texture_creator
-            .create_texture_streaming(PixelFormatEnum::RGB24, WIDTH, HEIGHT)
-            .map_err(|e| e.to_string())?;
+        // Display the current frame on every canvas/window
+        for canvas in canvases.iter_mut() {
+            let texture_creator = canvas.texture_creator();
+            let mut texture = texture_creator
+                .create_texture_streaming(PixelFormatEnum::RGB24, WIDTH, HEIGHT)
+                .map_err(|e| e.to_string())?;
 
-        texture
-            .update(None, &frames[current_frame_index], (WIDTH * 3) as usize)
-            .map_err(|e| e.to_string())?;
+            texture
+                .update(None, &frames[current_frame_index], (WIDTH * 3) as usize)
+                .map_err(|e| e.to_string())?;
 
-        // Get the window size (which may differ from WIDTH/HEIGHT in fullscreen)
-        let (window_width, window_height) = canvas.output_size()
-            .map_err(|e| e.to_string())?;
+            // Get the window size (which may differ from WIDTH/HEIGHT in fullscreen)
+            let (window_width, window_height) = canvas.output_size()
+                .map_err(|e| e.to_string())?;
 
-        // Calculate the destination rectangle to maintain aspect ratio
-        let image_aspect = WIDTH as f32 / HEIGHT as f32;
-        let window_aspect = window_width as f32 / window_height as f32;
+            // Calculate the destination rectangle to maintain aspect ratio
+            let image_aspect = WIDTH as f32 / HEIGHT as f32;
+            let window_aspect = window_width as f32 / window_height as f32;
 
-        let (dst_width, dst_height) = if window_aspect > image_aspect {
-            // Window is wider than image - pillarbox (black bars on sides)
-            let scaled_height = window_height;
-            let scaled_width = (scaled_height as f32 * image_aspect) as u32;
-            (scaled_width, scaled_height)
-        } else {
-            // Window is taller than image - letterbox (black bars on top/bottom)
-            let scaled_width = window_width;
-            let scaled_height = (scaled_width as f32 / image_aspect) as u32;
-            (scaled_width, scaled_height)
-        };
+            let (dst_width, dst_height) = if window_aspect > image_aspect {
+                // Window is wider than image - pillarbox (black bars on sides)
+                let scaled_height = window_height;
+                let scaled_width = (scaled_height as f32 * image_aspect) as u32;
+                (scaled_width, scaled_height)
+            } else {
+                // Window is taller than image - letterbox (black bars on top/bottom)
+                let scaled_width = window_width;
+                let scaled_height = (scaled_width as f32 / image_aspect) as u32;
+                (scaled_width, scaled_height)
+            };
 
-        // Center the image in the window
-        let dst_x = (window_width as i32 - dst_width as i32) / 2;
-        let dst_y = (window_height as i32 - dst_height as i32) / 2;
-        let dst_rect = Rect::new(dst_x, dst_y, dst_width, dst_height);
+            // Center the image in the window
+            let dst_x = (window_width as i32 - dst_width as i32) / 2;
+            let dst_y = (window_height as i32 - dst_height as i32) / 2;
+            let dst_rect = Rect::new(dst_x, dst_y, dst_width, dst_height);
 
-        canvas.clear();
-        canvas.copy(&texture, None, Some(dst_rect))?;
-        canvas.present();
+            canvas.clear();
+            canvas.copy(&texture, None, Some(dst_rect))?;
+            canvas.present();
+        }
 
         // Small sleep to avoid burning CPU
         std::thread::sleep(Duration::from_millis(10));
