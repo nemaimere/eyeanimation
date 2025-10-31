@@ -10,7 +10,6 @@ use std::path::PathBuf;
 const WIDTH: u32 = 480;
 const HEIGHT: u32 = 800;
 const FRAME_DURATION_MS: u64 = 30;
-const LOOP_PAUSE_MS: u64 = 500;
 const FRAMES_DIR: &str = "assets/blink_one_eye";
 
 fn main() -> Result<(), String> {
@@ -94,7 +93,7 @@ fn main() -> Result<(), String> {
                     ..
                 } => break 'running,
                 Event::KeyDown {
-                    keycode: Some(Keycode::Space),
+                    keycode: Some(Keycode::PageDown),
                     ..
                 } => {
                     paused = !paused;
